@@ -1,0 +1,148 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#171722">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Fokus">
+  <link rel="manifest" href="manifest.webmanifest">
+  <title>Fokus</title>
+  <style>
+    :root { color-scheme: dark; --bg:#0d0d14; --card:#171722; --muted:#9b9baa; --accent:#7c6cff; --green:#55d68a; --danger:#ff6b81; }
+    * { box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+    body { margin:0; background:linear-gradient(180deg,#11111b,#0b0b11); color:#fff; font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display",sans-serif; }
+    .app { max-width:560px; min-height:100vh; margin:auto; padding:calc(18px + env(safe-area-inset-top)) 18px calc(90px + env(safe-area-inset-bottom)); }
+    h1 { font-size:38px; margin:8px 0 2px; letter-spacing:-1.5px; }
+    .sub { color:var(--muted); margin-bottom:22px; }
+    .card { background:rgba(23,23,34,.92); border:1px solid #29293a; border-radius:24px; padding:20px; margin:14px 0; box-shadow:0 10px 30px #0002; }
+    .hero { text-align:center; }
+    .ring { width:210px; height:210px; margin:8px auto 18px; border-radius:50%; display:grid; place-items:center; background:conic-gradient(var(--accent) calc(var(--p)*1%), #29293a 0); position:relative; }
+    .ring:after { content:""; position:absolute; inset:15px; border-radius:50%; background:#11111b; }
+    .ring > div { position:relative; z-index:1; }
+    .big { font-size:58px; font-weight:800; letter-spacing:-3px; }
+    .label { color:var(--muted); }
+    button, input, select { font:inherit; }
+    button { width:100%; border:0; border-radius:16px; padding:15px 16px; margin-top:10px; font-weight:700; color:#fff; background:var(--accent); }
+    button.secondary { background:#29293a; }
+    button.danger { background:#3b2027; color:#ff9aaa; }
+    button:disabled { opacity:.5; }
+    .grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+    .stat { background:#11111b; border-radius:18px; padding:15px; }
+    .stat b { display:block; font-size:23px; margin-top:4px; }
+    .title { font-weight:750; font-size:18px; margin-bottom:8px; }
+    .muted { color:var(--muted); line-height:1.45; }
+    .tabs { position:fixed; bottom:0; left:0; right:0; background:#11111bee; backdrop-filter:blur(20px); border-top:1px solid #29293a; padding:9px max(12px, calc((100% - 560px)/2)); padding-bottom:calc(9px + env(safe-area-inset-bottom)); display:grid; grid-template-columns:repeat(3,1fr); gap:8px; z-index:5; }
+    .tabs button { margin:0; padding:9px 4px; background:transparent; color:var(--muted); font-size:12px; }
+    .tabs button.active { color:#fff; background:#252536; }
+    .page { display:none; } .page.active { display:block; }
+    .row { display:flex; justify-content:space-between; align-items:center; gap:15px; }
+    input[type=number] { width:100px; background:#11111b; border:1px solid #333346; color:#fff; border-radius:12px; padding:10px; text-align:center; }
+    .timer { font-size:54px; font-weight:800; text-align:center; margin:14px 0; font-variant-numeric:tabular-nums; }
+    .check { color:var(--green); font-weight:700; }
+  </style>
+</head>
+<body>
+<div class="app">
+  <section id="home" class="page active">
+    <h1>Fokus</h1>
+    <div class="sub">Ein Tag nach dem anderen.</div>
+    <div class="card hero">
+      <div class="ring" id="ring" style="--p:0"><div><div class="big" id="streak">0</div><div class="label">Tage</div></div></div>
+      <div id="startText" class="muted">Dein persönlicher Fokus beginnt, sobald du startest.</div>
+      <button id="startBtn" onclick="startFocus()">Fokus heute starten</button>
+      <button id="todayBtn" class="secondary" onclick="markToday()" disabled>Heute geschafft</button>
+      <button id="resetBtn" class="danger" onclick="resetFocus()" style="display:none">Neuen Start setzen</button>
+    </div>
+    <div class="grid">
+      <div class="stat"><span class="label">Ziel</span><b><span id="goalStat">30</span> Tage</b></div>
+      <div class="stat"><span class="label">Bewältigt</span><b id="urgeStat">0</b></div>
+    </div>
+    <div class="card">
+      <div class="title">Wenn der Drang kommt</div>
+      <div class="muted">Unterbrich den Moment für 10 Minuten. Atme langsam, steh auf, geh in einen anderen Raum oder beschäftige dich kurz mit etwas anderem.</div>
+      <button class="secondary" onclick="startTimer()">10-Minuten-Pause</button>
+    </div>
+  </section>
+
+  <section id="progress" class="page">
+    <h1>Fortschritt</h1>
+    <div class="sub">Dein Weg, ohne dich zu verurteilen.</div>
+    <div class="card">
+      <div class="row"><span>Serie</span><b id="pStreak">0 Tage</b></div><hr style="border-color:#29293a;border-width:1px 0 0;margin:16px 0">
+      <div class="row"><span>Ziel</span><b id="pGoal">30 Tage</b></div><hr style="border-color:#29293a;border-width:1px 0 0;margin:16px 0">
+      <div class="row"><span>Fortschritt</span><b id="pPercent">0 %</b></div><hr style="border-color:#29293a;border-width:1px 0 0;margin:16px 0">
+      <div class="row"><span>Bewältigte Momente</span><b id="pUrges">0</b></div>
+    </div>
+    <div class="card">
+      <div class="title">Wichtig</div>
+      <div class="muted">Ein Rückschlag macht deinen bisherigen Fortschritt nicht wertlos. Du kannst jederzeit einen neuen Startpunkt setzen.</div>
+    </div>
+  </section>
+
+  <section id="settings" class="page">
+    <h1>Einstellungen</h1>
+    <div class="sub">Deine persönliche Konfiguration.</div>
+    <div class="card">
+      <div class="row"><div><div class="title">Ziel in Tagen</div><div class="muted">Wähle dein persönliches Ziel.</div></div><input id="goalInput" type="number" min="1" max="365" value="30" onchange="setGoal(this.value)"></div>
+    </div>
+    <div class="card">
+      <div class="title">Datenschutz</div>
+      <div class="muted">Fokus speichert deine Angaben nur lokal im Browser auf diesem Gerät. Es gibt kein Konto und keinen Server für deine persönlichen Daten.</div>
+    </div>
+    <div class="card">
+      <div class="title">Über Fokus</div>
+      <div class="muted">Fokus ist ein persönlicher Gewohnheits-Tracker und ersetzt keine medizinische oder psychologische Beratung.</div>
+    </div>
+  </section>
+</div>
+
+<div class="tabs">
+  <button id="tab-home" class="active" onclick="showPage('home')">◉<br>Fokus</button>
+  <button id="tab-progress" onclick="showPage('progress')">▥<br>Fortschritt</button>
+  <button id="tab-settings" onclick="showPage('settings')">⚙<br>Einstellungen</button>
+</div>
+
+<div id="timerModal" style="display:none;position:fixed;inset:0;background:#000b;z-index:10;padding:25px;align-items:center;justify-content:center">
+  <div class="card" style="width:min(480px,100%);text-align:center">
+    <div class="title">10-Minuten-Pause</div>
+    <div class="muted">Du musst jetzt nichts entscheiden. Lass den Impuls vorbeiziehen.</div>
+    <div class="timer" id="timer">10:00</div>
+    <button class="secondary" onclick="closeTimer()">Schließen</button>
+  </div>
+</div>
+
+<script>
+const KEY='fokus-pwa-v1';
+let data=JSON.parse(localStorage.getItem(KEY)||'null')||{start:null,goal:30,urges:0,marked:{}};
+let timerId=null, seconds=600;
+function save(){localStorage.setItem(KEY,JSON.stringify(data));render();}
+function dayStart(d){return new Date(d.getFullYear(),d.getMonth(),d.getDate()).getTime();}
+function streak(){if(!data.start)return 0;return Math.max(0,Math.floor((dayStart(new Date())-dayStart(new Date(data.start)))/86400000));}
+function todayKey(){return new Date().toISOString().slice(0,10);}
+function render(){
+  const s=streak(), pct=Math.min(100,Math.round(s/Math.max(1,data.goal)*100));
+  document.getElementById('streak').textContent=s; document.getElementById('ring').style.setProperty('--p',pct);
+  document.getElementById('goalStat').textContent=data.goal; document.getElementById('urgeStat').textContent=data.urges;
+  document.getElementById('pStreak').textContent=s+' '+(s===1?'Tag':'Tage'); document.getElementById('pGoal').textContent=data.goal+' Tage';
+  document.getElementById('pPercent').textContent=pct+' %'; document.getElementById('pUrges').textContent=data.urges;
+  document.getElementById('goalInput').value=data.goal;
+  const started=!!data.start, marked=!!data.marked[todayKey()];
+  document.getElementById('startBtn').disabled=started; document.getElementById('todayBtn').disabled=!started||marked;
+  document.getElementById('todayBtn').textContent=marked?'✓ Heute bereits eingetragen':'Heute geschafft';
+  document.getElementById('resetBtn').style.display=started?'block':'none';
+  document.getElementById('startText').textContent=started?'Dein Fokus läuft. Bleib bei deinem nächsten kleinen Schritt.':'Dein persönlicher Fokus beginnt, sobald du startest.';
+}
+function startFocus(){data.start=dayStart(new Date());save();}
+function resetFocus(){if(confirm('Neuen Startpunkt für heute setzen?')){data.start=dayStart(new Date());save();}}
+function markToday(){data.marked[todayKey()]=true;data.urges++;save();}
+function setGoal(v){data.goal=Math.min(365,Math.max(1,parseInt(v)||30));save();}
+function showPage(id){document.querySelectorAll('.page').forEach(x=>x.classList.remove('active'));document.getElementById(id).classList.add('active');document.querySelectorAll('.tabs button').forEach(x=>x.classList.remove('active'));document.getElementById('tab-'+id).classList.add('active');}
+function startTimer(){data.urges++;save();seconds=600;document.getElementById('timerModal').style.display='flex';updateTimer();clearInterval(timerId);timerId=setInterval(()=>{seconds--;updateTimer();if(seconds<=0){clearInterval(timerId);navigator.vibrate?.([200,100,200]);}},1000);}
+function updateTimer(){let m=Math.floor(seconds/60),s=seconds%60;document.getElementById('timer').textContent=String(m).padStart(2,'0')+':'+String(s).padStart(2,'0');}
+function closeTimer(){clearInterval(timerId);document.getElementById('timerModal').style.display='none';}
+render();
+</script>
+</body>
+</html>
